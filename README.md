@@ -89,9 +89,68 @@ class ProductToolset(ModelToolset):
 python manage.py runserver_mcp --port 8810      # ASGI/uvicorn MCP process
 ```
 
-Deployment topologies: co-located ASGI (`django_mcp_kit.asgi.mount`),
-singleserver-managed aux (`django_mcp_kit.services.connect` from gunicorn `post_fork`),
-or a separate **systemd** unit (recommended for production SSE — samples in [`deploy/`](./deploy)).
+## Deployment
+
+The MCP endpoint is **always ASGI** (Streamable HTTP uses SSE), but how it runs is a
+choice. All topologies run the same code — `runserver_mcp` serving the app from
+`django_mcp_kit.asgi:get_application` — only the process management differs. Pick by how
+your *site* is served and how much isolation you want:
+
+| Topology | Site stays WSGI | Process | Best for |
+|---|:--:|---|---|
+| **A — Co-located** | no (site → ASGI) | one ASGI process | single-service / already-ASGI sites |
+| **B — singleserver aux** | yes | gunicorn boots the MCP process, workers share it | dev == prod, no systemd |
+| **C — separate systemd unit** | yes | independent ASGI daemon | production SSE (recommended) |
+
+Health checks point at **`/healthz`** (a plain 200) — never `/mcp`, which is the
+Streamable-HTTP endpoint and returns 4xx to a bare GET.
+
+### A — Co-located (one ASGI process)
+
+Mount the MCP app beside your Django ASGI app; requests to `/mcp` (and `/healthz`,
+`/.well-known/...`) go to MCP, everything else to Django:
+
+```python
+# asgi.py
+from django.core.asgi import get_asgi_application
+from django_mcp_kit.asgi import mount
+
+application = mount(get_asgi_application())   # serves /mcp on the same process
+```
+
+### B — singleserver-managed aux ([`deploy/gunicorn.conf.py`](./deploy/gunicorn.conf.py))
+
+Your site stays WSGI/gunicorn. The first gunicorn worker boots the MCP process; all
+workers share it via an atomic socket lock (no systemd). Wire it in `post_fork`:
+
+```python
+# gunicorn.conf.py
+def post_fork(server, worker):
+    from django_mcp_kit.services import connect
+    connect()
+```
+
+Point your front-end proxy `/mcp` at `DJANGO_MCP_KIT["PORT"]` (default `8810`). The
+shipped `SingleServer` uses `health_check_url="/healthz"` and a bounded graceful shutdown.
+
+### C — Separate systemd unit ([`deploy/django-mcp.service`](./deploy/django-mcp.service))
+
+Run the MCP server as its own daemon — decoupled lifecycle, real graceful restart. The
+sample unit runs `runserver_mcp` with a bounded `--timeout-graceful-shutdown` (so
+long-lived SSE streams don't stall stop/restart) and `Restart=always`. Edit the paths/user,
+then:
+
+```bash
+sudo cp deploy/django-mcp.service /etc/systemd/system/
+sudo systemctl daemon-reload && sudo systemctl enable --now django-mcp
+```
+
+### nginx ([`deploy/nginx-mcp.conf`](./deploy/nginx-mcp.conf))
+
+For B and C, proxy `/mcp` to the MCP process. SSE requires **buffering off** and long read
+timeouts — the sample sets `proxy_buffering off` and `proxy_read_timeout 3600s`, and also
+proxies the `/.well-known/oauth-protected-resource` metadata. Add it inside your `server {}`
+block and reload nginx.
 
 ## Authorization Server (OAuth) setup
 
