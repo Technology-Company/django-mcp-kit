@@ -22,6 +22,11 @@ dependencies = [
     "singleserver>=0.4",
 ]
 
+[project.optional-dependencies]
+# Optional: the Wagtail admin settings page (django_mcp_kit.wagtail_connector).
+# Only needed by Wagtail projects that want to manage the OAuth client from the admin.
+wagtail = ["wagtail>=6,<8"]
+
 [project.urls]
 Repository = "https://github.com/CaptainDuck/django-mcp-kit"
 
@@ -31,6 +36,8 @@ packages = [{include = "django_mcp_kit"}]
 [tool.poetry.group.dev.dependencies]
 pytest = "*"
 pytest-django = "*"
+# Installed in the dev env so the Wagtail connector test runs in the normal suite.
+wagtail = ">=6,<8"
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]

@@ -17,14 +17,16 @@ coupling your business logic to any MCP framework.
 ## Install
 
 ```bash
-pip install django-mcp-kit   # everything: MCP SDK wire transport, OAuth, DRF on-ramp, singleserver
+pip install django-mcp-kit              # core: MCP SDK wire transport, OAuth, DRF on-ramp, singleserver
+pip install "django-mcp-kit[wagtail]"   # + the optional Wagtail admin settings page
 ```
 
-> Batteries included — no extras to remember. The MCP SDK + `uvicorn` (the only wire
-> transport today), django-oauth-toolkit (OAuth resource server), DRF (the ViewSet/model
-> on-ramp), and `singleserver` are all core dependencies. Their imports stay
-> lazy/contained, so the architectural boundary holds in code even though the packages
-> ship by default.
+> Batteries included. The MCP SDK + `uvicorn` (the only wire transport today),
+> django-oauth-toolkit (OAuth resource server), DRF (the ViewSet/model on-ramp), and
+> `singleserver` are all core dependencies — their imports stay lazy/contained, so the
+> architectural boundary holds in code even though the packages ship by default. The one
+> optional extra is **`[wagtail]`**, for the Wagtail admin settings page (Django-only
+> projects don't need Wagtail).
 
 ## Quickstart
 
@@ -90,6 +92,76 @@ python manage.py runserver_mcp --port 8810      # ASGI/uvicorn MCP process
 Deployment topologies: co-located ASGI (`django_mcp_kit.asgi.mount`),
 singleserver-managed aux (`django_mcp_kit.services.connect` from gunicorn `post_fork`),
 or a separate **systemd** unit (recommended for production SSE — samples in [`deploy/`](./deploy)).
+
+## Authorization Server (OAuth) setup
+
+This library is the **Resource Server** — it validates bearer tokens and serves the
+RFC 9728 discovery metadata. It does **not** provide the **Authorization Server** (the
+login, `/o/authorize`, `/o/token`, and the **consent page**). That role is
+django-oauth-toolkit (DOT), which ships as a dependency but must be wired up by the
+project:
+
+```python
+# settings.py
+INSTALLED_APPS += ["oauth2_provider"]
+OAUTH2_PROVIDER = {
+    "SCOPES": {"mcp": "Access MCP tools"},
+    "PKCE_REQUIRED": True,   # public clients (browser/native, e.g. claude.ai)
+}
+
+# urls.py — mount the Authorization Server endpoints
+path("o/", include("oauth2_provider.urls", namespace="oauth2_provider")),
+```
+
+### Provisioning the OAuth client
+
+Register an OAuth client (a DOT `Application`) per connector with the bundled command —
+idempotent, public + PKCE by default:
+
+```bash
+python manage.py create_mcp_oauth_client https://claude.ai/api/mcp/auth_callback \
+    --name "My connector"        # name shown on the consent page; --skip-consent to auto-approve
+```
+
+The client name defaults to `DJANGO_MCP_KIT["OAUTH_APP_NAME"]` (`"MCP connector"`) when
+`--name` is omitted. The command prints the **Client ID** to paste into the connector.
+`django_mcp_kit.oauth_client.ensure_oauth_application(...)` is the same helper if you'd
+rather provision from code.
+
+### The consent page
+
+The consent screen is rendered by **DOT's `AuthorizationView`** at `/o/authorize/` using
+its default template **`oauth2_provider/authorize.html`** (a plain approve/deny form).
+Whether it appears is controlled per-client by **`Application.skip_authorization`**:
+
+- `skip_authorization=False` (DOT default) — the user is shown the consent page on first
+  authorization.
+- `skip_authorization=True` — consent is auto-approved (no page). Reasonable for a
+  trusted first-party connector.
+
+The name shown on that consent page is the `Application.name` — set it per client with
+`create_mcp_oauth_client --name`, or change the default via `DJANGO_MCP_KIT["OAUTH_APP_NAME"]`.
+To customise the consent UI, override `oauth2_provider/authorize.html` in your own
+templates directory. This library has no opinion on and no default for the consent page —
+it only consumes the access token DOT issues.
+
+### Configuring it from the Wagtail admin (optional)
+
+For Wagtail projects, add the optional app to get a **"MCP connector"** page under the
+admin **Settings** menu that provisions/updates the client on save:
+
+```bash
+pip install "django-mcp-kit[wagtail]"    # Wagtail 6.x or 7.x
+```
+```python
+INSTALLED_APPS += ["django_mcp_kit.wagtail_connector"]
+# then: python manage.py migrate
+```
+
+Fields: enable, the consent-page name, redirect URIs, and skip-consent. **Access is
+gated by the `change_mcpconnectorsettings` permission — i.e. superusers only by default**;
+delegate to specific staff by granting that permission via a Group. Wagtail is *not* a
+core dependency — it's the optional `[wagtail]` extra, so Django-only projects skip it.
 
 ## Develop
 

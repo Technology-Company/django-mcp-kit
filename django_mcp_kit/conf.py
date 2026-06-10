@@ -17,6 +17,8 @@ DEFAULTS = {
     "OAUTH_ISSUER_URL": None,
     "RESOURCE_SERVER_URL": None,
     "REQUIRED_SCOPES": ["mcp"],
+    # Name shown on the OAuth consent page (the DOT Application.name).
+    "OAUTH_APP_NAME": "MCP connector",
     # Transport security: opt-in, off by default.
     "DNS_REBINDING_PROTECTION": False,
     "STATELESS": True,

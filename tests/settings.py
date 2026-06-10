@@ -8,11 +8,15 @@ INSTALLED_APPS = [
     "django.contrib.contenttypes",
     "django.contrib.auth",
     "oauth2_provider",
+    "wagtail.contrib.settings",
+    "wagtail",
     "django_mcp_kit",
+    "django_mcp_kit.wagtail_connector",
     "tests.dummyapp",
 ]
 
 OAUTH2_PROVIDER = {"SCOPES": {"mcp": "Use MCP"}}
+WAGTAIL_SITE_NAME = "test"
 
 DATABASES = {
     "default": {
