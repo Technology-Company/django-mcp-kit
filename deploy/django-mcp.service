@@ -1,0 +1,24 @@
+; Sample systemd unit for the MCP server (topology C -- recommended for
+; production SSE workloads). Copy to /etc/systemd/system/, edit paths/user, then:
+;   systemctl daemon-reload && systemctl enable --now django-mcp
+; nginx proxies /mcp -> 127.0.0.1:8810 (see nginx-mcp.conf).
+
+[Unit]
+Description=django-mcp-kit MCP server (ASGI)
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/srv/yoursite
+Environment=DJANGO_SETTINGS_MODULE=yoursite.settings.production
+ExecStart=/srv/yoursite/.venv/bin/python manage.py runserver_mcp --host 127.0.0.1 --port 8810 --timeout-graceful-shutdown 15
+Restart=always
+RestartSec=2
+; Bound shutdown so long-lived SSE streams don't stall stop/restart.
+TimeoutStopSec=20
+KillMode=mixed
+
+[Install]
+WantedBy=multi-user.target

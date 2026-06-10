@@ -1,0 +1,42 @@
+[project]
+name = "django-mcp-kit"
+version = "0.1.0"
+description = "Turns Django/Wagtail code into MCP tools (and resources) for Claude clients"
+authors = [
+    {name = "CaptainDuck",email = "johanna@techco.fi"}
+]
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "django>=4.2",
+    "pydantic>=2",
+    # v1 ships only the SDK wire transport, so the server works out of the box.
+    # The import stays confined to transports/sdk.py; Phase 2's own-wire transport
+    # (transports/http.py) can make these optional again.
+    "mcp>=1.2",
+    "uvicorn>=0.27",
+    # OAuth resource server, DRF on-ramp, and the singleserver topology ship by
+    # default. Their imports stay lazy/contained, but they're always available.
+    "django-oauth-toolkit>=2.0",
+    "djangorestframework>=3.14",
+    "singleserver>=0.4",
+]
+
+[project.urls]
+Repository = "https://github.com/CaptainDuck/django-mcp-kit"
+
+[tool.poetry]
+packages = [{include = "django_mcp_kit"}]
+
+[tool.poetry.group.dev.dependencies]
+pytest = "*"
+pytest-django = "*"
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "tests.settings"
+python_files = ["test_*.py"]
+testpaths = ["tests"]
