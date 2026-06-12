@@ -1,0 +1,31 @@
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install Poetry
+        run: pipx install poetry
+
+      - name: Install dependencies
+        run: poetry install --extras wagtail
+
+      - name: Pin Django 6.x and Wagtail 7.4
+        run: poetry run pip install "django>=6,<7" "wagtail>=7.4,<7.5"
+
+      - name: Lint
+        run: poetry run ruff check .
+
+      - name: Run tests
+        run: poetry run pytest

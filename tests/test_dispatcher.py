@@ -1,7 +1,6 @@
 import asyncio
 import json
 
-import pytest
 
 from django_mcp_kit.dispatcher import MCPDispatcher
 from django_mcp_kit.registry import ToolRegistry

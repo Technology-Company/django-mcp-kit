@@ -38,6 +38,7 @@ packages = [{include = "django_mcp_kit"}]
 [tool.poetry.group.dev.dependencies]
 pytest = "*"
 pytest-django = "*"
+ruff = "*"
 # Installed in the dev env so the Wagtail connector test runs in the normal suite.
 wagtail = ">=6,<8"
 

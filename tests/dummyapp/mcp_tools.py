@@ -68,7 +68,9 @@ async def whoami(user) -> dict:
 class Publish(Tool):
     name = "publish"
     description = "Gated on a setting (the MCP_ALLOW_PUBLISH pattern)."
-    enabled = lambda: getattr(settings, "MCP_ALLOW_PUBLISH", False)
+
+    def enabled():
+        return getattr(settings, "MCP_ALLOW_PUBLISH", False)
 
     class Input(Schema):
         pass

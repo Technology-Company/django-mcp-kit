@@ -6,7 +6,7 @@ import json
 import pytest
 
 from django_mcp_kit.dispatcher import MCPDispatcher
-from django_mcp_kit.registry import ToolRegistry, tool_registry, resource_registry
+from django_mcp_kit.registry import tool_registry, resource_registry
 
 
 def run(coro):
