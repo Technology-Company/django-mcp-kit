@@ -1,5 +1,10 @@
 # django-mcp-kit
 
+[![PyPI version](https://img.shields.io/pypi/v/django-mcp-kit.svg)](https://pypi.org/project/django-mcp-kit/)
+[![Python versions](https://img.shields.io/pypi/pyversions/django-mcp-kit.svg)](https://pypi.org/project/django-mcp-kit/)
+[![Django](https://img.shields.io/badge/Django-4.2%2B-092e20.svg)](https://www.djangoproject.com/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 Turns Django/Wagtail code into MCP tools (and resources) for Claude clients — without
 coupling your business logic to any MCP framework.
 
