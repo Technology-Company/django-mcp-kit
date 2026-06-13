@@ -12,6 +12,7 @@ Auth is *ours*: an ASGI middleware resolves the Django user via the
 
 from __future__ import annotations
 
+import base64
 import contextvars
 import json
 
@@ -30,7 +31,10 @@ def _convert_block(block):
 
     kind = block.get("type")
     if kind == "image":
-        return types.ImageContent(type="image", data=block["data"], mimeType=block["mimeType"])
+        data = block["data"]
+        if isinstance(data, (bytes, bytearray)):
+            data = base64.b64encode(data).decode("ascii")
+        return types.ImageContent(type="image", data=data, mimeType=block["mimeType"])
     if kind == "text":
         return types.TextContent(type="text", text=block["text"])
     return types.TextContent(type="text", text=json.dumps(block, default=str))

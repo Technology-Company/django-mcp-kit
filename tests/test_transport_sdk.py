@@ -1,5 +1,6 @@
 """Integration tests for the SDK wire transport (skipped if mcp/starlette absent)."""
 
+import base64
 import json
 
 import pytest
@@ -77,6 +78,9 @@ def _parse_sse(text):
     return json.loads(text)
 
 
+PNG_BYTES = b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR"
+
+
 class ImageTool(Tool):
     abstract = True
     name = "img"
@@ -90,10 +94,23 @@ class ImageTool(Tool):
         return Image(data="Zm9v", format="png")
 
 
-def test_image_content_through_transport(settings):
+class ImageBytesTool(Tool):
+    abstract = True
+    name = "img_bytes"
+    description = "Returns an image as raw bytes."
+
+    class Input(Schema):
+        pass
+
+    def run(self, user):
+        from django_mcp_kit import Image
+        return Image(data=PNG_BYTES, format="png")
+
+
+def _image_tool_response(settings, tool):
     settings.DJANGO_MCP_KIT = {**settings.DJANGO_MCP_KIT, "REQUIRE_AUTH": False}
     reg = ToolRegistry()
-    reg.register(ImageTool())
+    reg.register(tool)
     app = build_application(MCPDispatcher(tools=reg))
     headers = {"Accept": "application/json, text/event-stream", "Content-Type": "application/json"}
     with TestClient(app) as c:
@@ -107,10 +124,24 @@ def test_image_content_through_transport(settings):
 
         rpc("initialize", {"protocolVersion": "2025-06-18", "capabilities": {},
                            "clientInfo": {"name": "t", "version": "1"}})
-        called = rpc("tools/call", {"name": "img", "arguments": {}}, _id=2)
-        block = called["result"]["content"][0]
-        assert block["type"] == "image"
-        assert block["mimeType"] == "image/png"
+        return rpc("tools/call", {"name": tool.name, "arguments": {}}, _id=2)
+
+
+def test_image_content_through_transport(settings):
+    called = _image_tool_response(settings, ImageTool())
+    block = called["result"]["content"][0]
+    assert block["type"] == "image"
+    assert block["mimeType"] == "image/png"
+    # Already-encoded str payloads round-trip unchanged.
+    assert block["data"] == "Zm9v"
+
+
+def test_image_bytes_are_base64_encoded_at_the_wire(settings):
+    called = _image_tool_response(settings, ImageBytesTool())
+    block = called["result"]["content"][0]
+    assert block["type"] == "image"
+    assert block["mimeType"] == "image/png"
+    assert block["data"] == base64.b64encode(PNG_BYTES).decode("ascii")
 
 
 def test_full_handshake_and_tool_call(client):
