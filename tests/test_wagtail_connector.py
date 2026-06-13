@@ -29,6 +29,22 @@ def test_saving_enabled_settings_provisions_oauth_client():
     assert app.client_type == Application.CLIENT_PUBLIC
 
 
+def test_admin_panels_expose_all_fields():
+    # All connector fields must be present in the admin form, in order. Regression:
+    # editable=False once hid client_id entirely, so the generated Client ID never showed.
+    panel_fields = [getattr(p, "field_name", None) for p in MCPConnectorSettings.panels]
+    assert panel_fields == ["enabled", "app_name", "redirect_uris", "skip_consent", "client_id"]
+
+    panels = {p.field_name: p for p in MCPConnectorSettings.panels}
+    # Every field renders (editable) so it isn't dropped from the form...
+    for name in panel_fields:
+        assert MCPConnectorSettings._meta.get_field(name).editable is True
+    # ...but the generated client_id is read-only (display only), the rest are editable.
+    assert panels["client_id"].read_only is True
+    for name in ["enabled", "app_name", "redirect_uris", "skip_consent"]:
+        assert getattr(panels[name], "read_only", False) is False
+
+
 @pytest.mark.django_db
 def test_disabled_settings_do_not_provision():
     MCPConnectorSettings(enabled=False, redirect_uris="https://x/cb").save()

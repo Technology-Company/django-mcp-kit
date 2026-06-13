@@ -12,6 +12,7 @@ Supported on Wagtail 6.x and 7.x.
 from __future__ import annotations
 
 from django.db import models
+from wagtail.admin.panels import FieldPanel
 from wagtail.contrib.settings.models import BaseGenericSetting, register_setting
 
 from .. import conf
@@ -30,7 +31,19 @@ class MCPConnectorSettings(BaseGenericSetting):
         blank=True, help_text="Allowed redirect URIs, one per line.")
     skip_consent = models.BooleanField(
         default=False, help_text="Auto-approve authorization (skip the consent page).")
-    client_id = models.CharField(max_length=100, blank=True, editable=False)
+    # Populated on save. Kept editable so it renders as a read-only panel below
+    # (editable=False would exclude it from the admin form entirely).
+    client_id = models.CharField(
+        max_length=100, blank=True,
+        help_text="Generated Client ID — paste this into the connector.")
+
+    panels = [
+        FieldPanel("enabled"),
+        FieldPanel("app_name"),
+        FieldPanel("redirect_uris"),
+        FieldPanel("skip_consent"),
+        FieldPanel("client_id", read_only=True),
+    ]
 
     class Meta:
         verbose_name = "MCP connector"
