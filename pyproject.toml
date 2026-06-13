@@ -1,6 +1,6 @@
 [project]
 name = "django-mcp-kit"
-version = "0.1.0"
+version = "0.1.1"
 description = "Turns Django/Wagtail code into MCP tools (and resources) for Claude clients"
 authors = [
     {name = "CaptainDuck",email = "johanna@techco.fi"}

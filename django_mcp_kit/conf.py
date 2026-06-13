@@ -10,7 +10,7 @@ from django.conf import settings
 
 DEFAULTS = {
     "SERVER_NAME": "django-mcp-kit",
-    "SERVER_VERSION": "0.1.0",
+    "SERVER_VERSION": "0.1.1",
     "AUTH_BACKENDS": ["django_mcp_kit.auth.StaticBearer"],
     "TRANSPORT": "django_mcp_kit.transports.sdk",
     # OAuth resource-server params (see auth/oauth.py):
